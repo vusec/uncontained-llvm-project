@@ -805,6 +805,12 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
           *CurModule, ArrayOfInt64Ty, false, GlobalVariable::InternalLinkage,
           ConstantArray::get(ArrayOfInt64Ty, Initializers),
           "__sancov_gen_cov_switch_values");
+
+      DebugLoc DbgLoc = SI->getDebugLoc();
+      if (!DbgLoc)
+        if (DISubprogram *SP = SI->getFunction()->getSubprogram())
+          DbgLoc = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
+      IRB.SetCurrentDebugLocation(DbgLoc);
       IRB.CreateCall(SanCovTraceSwitchFunction,
                      {Cond, IRB.CreatePointerCast(GV, Int64PtrTy)});
     }
@@ -869,6 +875,11 @@ void ModuleSanitizerCoverage::InjectTraceForCmp(
       }
 
       auto Ty = Type::getIntNTy(*C, TypeSize);
+      DebugLoc DbgLoc = ICMP->getDebugLoc();
+      if (!DbgLoc)
+        if (DISubprogram *SP = ICMP->getFunction()->getSubprogram())
+          DbgLoc = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
+      IRB.SetCurrentDebugLocation(DbgLoc);
       IRB.CreateCall(CallbackFunc, {IRB.CreateIntCast(A0, Ty, true),
               IRB.CreateIntCast(A1, Ty, true)});
     }
@@ -890,6 +901,9 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     IP = PrepareToSplitEntryBlock(BB, IP);
   } else {
     EntryLoc = IP->getDebugLoc();
+    if (!EntryLoc)
+      if (auto *SP = F.getSubprogram())
+        EntryLoc = DILocation::get(SP->getContext(), 0, 0, SP);
   }
 
   IRBuilder<> IRB(&*IP);

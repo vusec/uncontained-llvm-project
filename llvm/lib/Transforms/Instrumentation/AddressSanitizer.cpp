@@ -1303,6 +1303,13 @@ Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
 // Instrument memset/memmove/memcpy
 void AddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
+
+  DebugLoc DbgLoc = MI->getDebugLoc();
+  if (!DbgLoc)
+    if (DISubprogram *SP = MI->getFunction()->getSubprogram())
+      DbgLoc = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
+  IRB.SetCurrentDebugLocation(DbgLoc);
+
   if (isa<MemTransferInst>(MI)) {
     IRB.CreateCall(
         isa<MemMoveInst>(MI) ? AsanMemmove : AsanMemcpy,
@@ -1603,6 +1610,12 @@ Instruction *AddressSanitizer::generateCrashCode(Instruction *InsertBefore,
   IRBuilder<> IRB(InsertBefore);
   Value *ExpVal = Exp == 0 ? nullptr : ConstantInt::get(IRB.getInt32Ty(), Exp);
   CallInst *Call = nullptr;
+
+  DebugLoc DbgLoc = InsertBefore->getDebugLoc();
+  if (!DbgLoc)
+    if (DISubprogram *SP = InsertBefore->getFunction()->getSubprogram())
+      DbgLoc = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
+  IRB.SetCurrentDebugLocation(DbgLoc);
   if (SizeArgument) {
     if (Exp == 0)
       Call = IRB.CreateCall(AsanErrorCallbackSized[IsWrite][0],
@@ -1651,6 +1664,12 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   IRBuilder<> IRB(InsertBefore);
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
   size_t AccessSizeIndex = TypeSizeToSizeIndex(TypeSize);
+
+  DebugLoc DbgLoc = InsertBefore->getDebugLoc();
+  if (!DbgLoc)
+    if (DISubprogram *SP = InsertBefore->getFunction()->getSubprogram())
+      DbgLoc = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
+  IRB.SetCurrentDebugLocation(DbgLoc);
 
   if (UseCalls) {
     if (Exp == 0)
@@ -1729,6 +1748,11 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
   IRBuilder<> IRB(InsertBefore);
   Value *Size = ConstantInt::get(IntptrTy, TypeSize / 8);
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
+  DebugLoc DbgLoc = InsertBefore->getDebugLoc();
+  if (!DbgLoc)
+    if (DISubprogram *SP = InsertBefore->getFunction()->getSubprogram())
+      DbgLoc = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
+  IRB.SetCurrentDebugLocation(DbgLoc);
   if (UseCalls) {
     if (Exp == 0)
       IRB.CreateCall(AsanMemoryAccessCallbackSized[IsWrite][0],
