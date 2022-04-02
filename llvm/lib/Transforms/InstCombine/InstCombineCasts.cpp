@@ -1944,23 +1944,28 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
 
 /// Implement the transforms for cast of pointer (bitcast/ptrtoint)
 Instruction *InstCombinerImpl::commonPointerCastTransforms(CastInst &CI) {
-  Value *Src = CI.getOperand(0);
 
-  if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Src)) {
-    // If casting the result of a getelementptr instruction with no offset, turn
-    // this into a cast of the original pointer!
-    if (GEP->hasAllZeroIndices() &&
-        // If CI is an addrspacecast and GEP changes the poiner type, merging
-        // GEP into CI would undo canonicalizing addrspacecast with different
-        // pointer types, causing infinite loops.
-        (!isa<AddrSpaceCastInst>(CI) ||
-         GEP->getType() == GEP->getPointerOperandType())) {
-      // Changing the cast operand is usually not a good idea but it is safe
-      // here because the pointer operand is being replaced with another
-      // pointer operand so the opcode doesn't need to change.
-      return replaceOperand(CI, 0, GEP->getOperand(0));
-    }
-  }
+  // UNCONTAINED: 
+  // we disable the instruction combiner on pointer transformations to avoid 
+  // loosing type information on accesses to internal struct fields
+
+  // Value *Src = CI.getOperand(0);
+
+  // if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Src)) {
+  //   // If casting the result of a getelementptr instruction with no offset, turn
+  //   // this into a cast of the original pointer!
+  //   if (GEP->hasAllZeroIndices() &&
+  //       // If CI is an addrspacecast and GEP changes the poiner type, merging
+  //       // GEP into CI would undo canonicalizing addrspacecast with different
+  //       // pointer types, causing infinite loops.
+  //       (!isa<AddrSpaceCastInst>(CI) ||
+  //        GEP->getType() == GEP->getPointerOperandType())) {
+  //     // Changing the cast operand is usually not a good idea but it is safe
+  //     // here because the pointer operand is being replaced with another
+  //     // pointer operand so the opcode doesn't need to change.
+  //     return replaceOperand(CI, 0, GEP->getOperand(0));
+  //   }
+  // }
 
   return commonCastTransforms(CI);
 }

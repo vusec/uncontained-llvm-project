@@ -1850,6 +1850,12 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
 }
 
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
+
+  // UNCONTAINED: 
+  // we disable the instruction combiner on GEP to avoid loosing type information
+  // on accesses to internal struct fields
+  return nullptr;
+
   SmallVector<Value *, 8> Ops(GEP.operands());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
