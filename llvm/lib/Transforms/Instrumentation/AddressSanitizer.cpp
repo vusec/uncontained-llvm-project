@@ -1881,10 +1881,12 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
     // The kernel uses explicit sections for mostly special global variables
     // that we should not instrument. E.g. the kernel may rely on their layout
     // without redzones, or remove them at link time ("discard.*"), etc.
-    if (CompileKernel)
-      return false;
-
     StringRef Section = G->getSection();
+    if (CompileKernel)
+      // some of the sections are worth keeping
+      if (Section != ".data..read_mostly" && Section != ".data..ro_after_init")
+        return false;
+
 
     // Globals from llvm.metadata aren't emitted, do not instrument them.
     if (Section == "llvm.metadata") return false;
