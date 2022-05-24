@@ -2974,6 +2974,26 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
                                   MemorySSAUpdater *MSSAU,
                                   const TargetTransformInfo *TTI,
                                   unsigned BonusInstThreshold) {
+  // Disable cmp combination since uncontained checks uses that include compares.
+  // This pass would make compares that in theory would not be executed, to be 
+  // computed earlier and combined with logical operations. This would trigger
+  // an unsafe use of a wrong type in the case the cmp should not have been executed.
+  // An example: https://elixir.bootlin.com/linux/v5.18/source/kernel/kprobes.c#L670
+  // with 
+  // static bool optprobe_queued_unopt(struct optimized_kprobe *op)
+  // {
+  //   struct optimized_kprobe *_op;
+
+  //   list_for_each_entry(_op, &unoptimizing_list, list) {
+  //     if (op == _op)
+  //       return true;
+  //   }
+
+  //   return false;
+  // }
+  // Where the op == _op compare would be executed even when the list is empty/finished
+  return false;
+  
   // If this block ends with an unconditional branch,
   // let SpeculativelyExecuteBB() deal with it.
   if (!BI->isConditional())
