@@ -2562,6 +2562,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *FalseVal = SI.getFalseValue();
   Type *SelType = SI.getType();
 
+  // UNCONTAINED:
+  // Do not touch our lovely select instructions, since we use them
+  // to simply model the dataflow
+  return nullptr;
+
   // FIXME: Remove this workaround when freeze related patches are done.
   // For select with undef operand which feeds into an equality comparison,
   // don't simplify it so loop unswitch can know the equality comparison

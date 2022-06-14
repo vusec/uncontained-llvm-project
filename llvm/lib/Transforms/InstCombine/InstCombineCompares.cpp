@@ -3230,6 +3230,10 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
         return NV;
     break;
   case Instruction::Select: {
+    // UNCONTAINED:
+    // Avoid removing the select instruciton that would remove dataflow information
+    // and cause false positives
+    return nullptr;
     // If either operand of the select is a constant, we can fold the
     // comparison into the select arms, which will cause one to be
     // constant folded and the select turned into a bitwise or.
@@ -4970,6 +4974,10 @@ bool InstCombinerImpl::replacedSelectWithOperand(SelectInst *SI,
                                                  const ICmpInst *Icmp,
                                                  const unsigned SIOpd) {
   assert((SIOpd == 1 || SIOpd == 2) && "Invalid select operand!");
+  // UNCONTAINED:
+  // avoid replacling the select with it's operand, as we would lose dataflow
+  // information and trigger on false positives
+  return false;
   if (isChainSelectCmpBranch(SI) && Icmp->getPredicate() == ICmpInst::ICMP_EQ) {
     BasicBlock *Succ = SI->getParent()->getTerminator()->getSuccessor(1);
     // The check for the single predecessor is not the best that can be

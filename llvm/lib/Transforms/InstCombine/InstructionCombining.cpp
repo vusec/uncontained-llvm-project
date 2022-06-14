@@ -821,6 +821,16 @@ Value *InstCombinerImpl::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                         Value *LHS,
                                                         Value *RHS) {
+  // UNCONTAINED:
+  // Disable the forwarding of operations on select results over the operands.
+  // E.g., (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
+  // Since doing that we would lose the flow dependency on the select condition
+  // over the operation execution, i.e., the operations would be executed always
+  // on both sides, independently on the constraint. Usually this is safe since
+  // we are talking about binary operations, but we perform strict checks on the
+  // usage of pointers, e.g. even compares, and thus would incur false positives.
+  return nullptr;
+
   Value *A, *B, *C, *D, *E, *F;
   bool LHSIsSelect = match(LHS, m_Select(m_Value(A), m_Value(B), m_Value(C)));
   bool RHSIsSelect = match(RHS, m_Select(m_Value(D), m_Value(E), m_Value(F)));
