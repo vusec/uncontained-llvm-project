@@ -110,6 +110,14 @@ void TypeMapTy::addTypeMapping(Type *DstTy, Type *SrcTy) {
   SpeculativeDstOpaqueTypes.clear();
 }
 
+static StringRef getTypeNamePrefix(StringRef Name) {
+  size_t DotPos = Name.rfind('.');
+  return (DotPos == 0 || DotPos == StringRef::npos || Name.back() == '.' ||
+          !isdigit(static_cast<unsigned char>(Name[DotPos + 1])))
+             ? Name
+             : Name.substr(0, DotPos);
+}
+
 /// Recursively walk this pair of types, returning true if they are isomorphic,
 /// false if they are not.
 bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
@@ -192,8 +200,14 @@ bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
                             SrcTy->getContainedType(I)))
       return false;
 
-  // If everything seems to have lined up, then everything is great.
-  return true;
+  if (StructType *DSTy = dyn_cast<StructType>(DstTy)) {
+    if (StructType *SSTy = dyn_cast<StructType>(SrcTy)) {
+      if (getTypeNamePrefix(SSTy->getName()).equals(getTypeNamePrefix(DSTy->getName())))
+        // If everything seems to have lined up, then everything is great.
+        return true;
+    }
+  }
+  return false;
 }
 
 void TypeMapTy::linkDefinedTypeBodies() {
@@ -730,14 +744,6 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
   }
 
   return NewGV;
-}
-
-static StringRef getTypeNamePrefix(StringRef Name) {
-  size_t DotPos = Name.rfind('.');
-  return (DotPos == 0 || DotPos == StringRef::npos || Name.back() == '.' ||
-          !isdigit(static_cast<unsigned char>(Name[DotPos + 1])))
-             ? Name
-             : Name.substr(0, DotPos);
 }
 
 /// Loop over all of the linked values to compute type mappings.  For example,
